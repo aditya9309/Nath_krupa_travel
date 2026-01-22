@@ -2,7 +2,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 
 const api = axios.create({
-  baseURL: 'http://localhost:5002/api',
+  baseURL: 'https://nath-karupa.onrender.com',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
@@ -56,3 +56,4 @@ api.interceptors.response.use(
 )
 
 export default api
+
