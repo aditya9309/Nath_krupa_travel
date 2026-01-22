@@ -5,7 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/errorHandler.js';
 
-// Import Routes
+// Routes
 import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import tripRequestRoutes from './routes/tripRequestRoutes.js';
@@ -31,40 +31,31 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5002;
 
-// Middleware
-// CORS configuration - Allow requests from frontend
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like Postman, mobile apps, or server-to-server)
-    if (!origin) return callback(null, true);
-    
-    // Allow the configured client URL
-    if (process.env.CLIENT_URL && origin === process.env.CLIENT_URL) {
-      return callback(null, true);
-    }
-    
-    // Allow any localhost origin during development (for flexibility)
-    if (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin)) {
-      return callback(null, true);
-    }
-    
-    // In production, only allow configured CLIENT_URL
-    if (process.env.NODE_ENV === 'production') {
-      return callback(new Error('Not allowed by CORS'));
-    }
-    
-    // Default: allow in development
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+/* =====================================================
+   🔐 CORS — FINAL & RENDER SAFE
+   ===================================================== */
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL, // EXACT frontend URL
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
+// Preflight (OPTIONS) support
+app.options('*', cors());
+
+/* =====================================================
+   🧩 GLOBAL MIDDLEWARES
+   ===================================================== */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Routes
+/* =====================================================
+   🚏 ROUTES
+   ===================================================== */
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/trip-requests', tripRequestRoutes);
@@ -85,45 +76,48 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/contact-enquiries', contactEnquiryRoutes);
 
-// Health check
+/* =====================================================
+   ❤️ HEALTH CHECK
+   ===================================================== */
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.status(200).json({
     success: true,
-    status: 'OK', 
+    status: 'OK',
     message: 'Nath Krupa Travels API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Error handling middleware
+/* =====================================================
+   ❌ ERROR HANDLER
+   ===================================================== */
 app.use(errorHandler);
 
-// Handle unhandled promise rejections
+/* =====================================================
+   ⚠️ PROCESS LEVEL SAFETY
+   ===================================================== */
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Promise Rejection:', err);
-  // Don't exit in production, just log
-  if (process.env.NODE_ENV === 'production') {
-    // Could send to error tracking service here
-  }
 });
 
-// Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
   process.exit(1);
 });
 
-// Database connection
-mongoose.connect(process.env.MONGO_URI)
+/* =====================================================
+   🗄️ DATABASE + SERVER START
+   ===================================================== */
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('✅ MongoDB connected successfully');
+    console.log('✅ MongoDB connected');
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📡 API Health: http://localhost:${PORT}/api/health`);
     });
   })
-  .catch((error) => {
-    console.error('❌ MongoDB connection error:', error);
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
   });
 
