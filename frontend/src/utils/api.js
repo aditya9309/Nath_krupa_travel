@@ -1,43 +1,36 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
+// ✅ BASE URL FROM ENV (PRODUCTION SAFE)
 const api = axios.create({
-  baseURL: 'https://nath-karupa.onrender.com',
+  baseURL: import.meta.env.VITE_API_URL, // MUST include /api
   withCredentials: true,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 })
 
 // Request interceptor
 api.interceptors.request.use(
-  (config) => {
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
+  (config) => config,
+  (error) => Promise.reject(error)
 )
 
-// Response interceptor for error handling
+// Response interceptor
 api.interceptors.response.use(
-  (response) => {
-    return response
-  },
+  (response) => response,
   (error) => {
-    // Handle network errors
+    // 🔴 Network / CORS / backend unreachable
     if (!error.response) {
       toast.error('Network error. Please check your connection.')
       return Promise.reject(error)
     }
 
-    // Handle specific error status codes
-    const status = error.response?.status
-    const message = error.response?.data?.message || 'An error occurred'
+    const status = error.response.status
+    const message = error.response.data?.message || 'An error occurred'
 
     if (status === 401) {
-      // Unauthorized - token might be expired
-      // Don't show toast here as individual components handle it
+      // token expired / not logged in
     } else if (status === 403) {
       toast.error(message || 'Access denied')
     } else if (status === 404) {
@@ -45,10 +38,7 @@ api.interceptors.response.use(
     } else if (status >= 500) {
       toast.error('Server error. Please try again later.')
     } else if (status >= 400) {
-      // Show validation errors
-      if (message) {
-        toast.error(message)
-      }
+      toast.error(message)
     }
 
     return Promise.reject(error)
@@ -56,4 +46,3 @@ api.interceptors.response.use(
 )
 
 export default api
-
