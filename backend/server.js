@@ -34,29 +34,22 @@ const PORT = process.env.PORT || 5002;
 /* =====================================================
    🔐 CORS — FINAL & RENDER SAFE
    ===================================================== */
-const allowedOrigins = [
-  process.env.CLIENT_URL, // Netlify URL
-];
+// 🔥 MUST for Render / Netlify
+app.set("trust proxy", 1);
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow server-to-server, health checks, curl, etc.
-    if (!origin) return callback(null, true);
+// 🔥 FINAL CORS (no custom logic headache)
+app.use(
+  cors({
+    origin: true,        // reflect request origin
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-    // Allow ALL Netlify domains (prod + preview)
-    if (origin.endsWith(".netlify.app")) {
-      return callback(null, true);
-    }
+// 🔥 MUST for preflight
+app.options("*", cors());
 
-    // ❌ DO NOT THROW ERROR
-    // ❌ DO NOT return false
-    // Just silently disallow
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
@@ -138,5 +131,6 @@ mongoose
   });
 
 export default app;
+
 
 
