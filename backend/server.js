@@ -38,23 +38,29 @@ const allowedOrigins = [
   process.env.CLIENT_URL, // Netlify URL
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow server-to-server, health checks, curl, etc.
+    if (!origin) return callback(null, true);
 
-// ✅ MUST for preflight
-app.options("*", cors());
+    // Allow ALL Netlify domains (prod + preview)
+    if (origin.endsWith(".netlify.app")) {
+      return callback(null, true);
+    }
+
+    // ❌ DO NOT THROW ERROR
+    // ❌ DO NOT return false
+    // Just silently disallow
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
 
 /* =====================================================
    🧩 GLOBAL MIDDLEWARES
@@ -132,4 +138,5 @@ mongoose
   });
 
 export default app;
+
 
