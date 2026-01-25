@@ -34,17 +34,27 @@ const PORT = process.env.PORT || 5002;
 /* =====================================================
    🔐 CORS — FINAL & RENDER SAFE
    ===================================================== */
+const allowedOrigins = [
+  process.env.CLIENT_URL, // Netlify URL
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL, // EXACT frontend URL
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Preflight (OPTIONS) support
-app.options('*', cors());
+// ✅ MUST for preflight
+app.options("*", cors());
 
 /* =====================================================
    🧩 GLOBAL MIDDLEWARES
@@ -122,3 +132,4 @@ mongoose
   });
 
 export default app;
+
