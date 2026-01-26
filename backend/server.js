@@ -32,23 +32,20 @@ const app = express();
 const PORT = process.env.PORT || 5002;
 
 /* =====================================================
-   🔐 CORS — FIXED (NO ERRORS)
+   🔐 CORS — FINAL (NO BLOCK, NO ERROR)
    ===================================================== */
 app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: [
-      "https://nathkrupatravel.netlify.app",
-      "http://localhost:5173"
-    ],
+    origin: true,              // 🔥 allow request origin automatically
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// ✅ Preflight support
+// 🔥 Preflight (MOST IMPORTANT)
 app.options("*", cors());
 
 /* =====================================================
