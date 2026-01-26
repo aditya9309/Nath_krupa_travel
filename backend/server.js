@@ -32,28 +32,24 @@ const app = express();
 const PORT = process.env.PORT || 5002;
 
 /* =====================================================
-   🔐 CORS — FINAL & RENDER SAFE
+   🔐 CORS — FIXED (NO ERRORS)
    ===================================================== */
-// 🔥 MUST for Render / Netlify
 app.set("trust proxy", 1);
 
-// 🔥 FINAL CORS (no custom logic headache)
 app.use(
   cors({
-    origin: true,        // reflect request origin
+    origin: [
+      "https://nathkrupatravel.netlify.app",
+      "http://localhost:5173"
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// 🔥 MUST for preflight
+// ✅ Preflight support
 app.options("*", cors());
-
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
-
 
 /* =====================================================
    🧩 GLOBAL MIDDLEWARES
@@ -131,6 +127,3 @@ mongoose
   });
 
 export default app;
-
-
-
