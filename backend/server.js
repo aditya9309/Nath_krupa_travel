@@ -31,33 +31,27 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5002;
 
-/* =====================================================
-   🔐 CORS — FINAL (NO BLOCK, NO ERROR)
-   ===================================================== */
+/* ===================== CORS ===================== */
 app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: true,              // 🔥 allow request origin automatically
+    origin: true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// 🔥 Preflight (MOST IMPORTANT)
+// allow preflight
 app.options("*", cors());
 
-/* =====================================================
-   🧩 GLOBAL MIDDLEWARES
-   ===================================================== */
+/* ===================== MIDDLEWARES ===================== */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-/* =====================================================
-   🚏 ROUTES
-   ===================================================== */
+/* ===================== ROUTES ===================== */
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/trip-requests', tripRequestRoutes);
@@ -78,48 +72,21 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/contact-enquiries', contactEnquiryRoutes);
 
-/* =====================================================
-   ❤️ HEALTH CHECK
-   ===================================================== */
+/* ===================== HEALTH ===================== */
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    status: 'OK',
-    message: 'Nath Krupa Travels API is running',
-    timestamp: new Date().toISOString(),
-  });
+  res.json({ success: true, message: 'API running' });
 });
 
-/* =====================================================
-   ❌ ERROR HANDLER
-   ===================================================== */
+/* ===================== ERROR ===================== */
 app.use(errorHandler);
 
-/* =====================================================
-   ⚠️ PROCESS LEVEL SAFETY
-   ===================================================== */
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Promise Rejection:', err);
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
-  process.exit(1);
-});
-
-/* =====================================================
-   🗄️ DATABASE + SERVER START
-   ===================================================== */
-mongoose
-  .connect(process.env.MONGO_URI)
+/* ===================== DB ===================== */
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('✅ MongoDB connected');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`🚀 Server running on ${PORT}`));
   })
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err);
+  .catch(err => {
+    console.error(err);
     process.exit(1);
   });
 
