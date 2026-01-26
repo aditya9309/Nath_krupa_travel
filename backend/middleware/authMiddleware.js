@@ -2,11 +2,19 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 export const authenticate = async (req, res, next) => {
+  // 🔥 ALLOW PREFLIGHT REQUESTS
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+
   try {
     const token = req.cookies.token;
 
     if (!token) {
-      return res.status(401).json({ success: false, message: 'Authentication required' });
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -16,27 +24,14 @@ export const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'User not found' });
     }
 
-    // Users are now auto-approved, but keep check for legacy data
-    if (!user.isApproved && user.role !== 'admin') {
-      // Auto-approve if not already approved
-      user.isApproved = true;
-      await user.save();
-    }
-
     if (user.isBlocked) {
       return res.status(403).json({ success: false, message: 'Account is blocked' });
     }
 
     req.user = user;
     next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ success: false, message: 'Invalid token' });
-    }
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ success: false, message: 'Token expired' });
-    }
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -45,11 +40,9 @@ export const authorize = (...roles) => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
-
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-
     next();
   };
 };
