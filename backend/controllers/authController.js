@@ -288,12 +288,13 @@ export const login = async (req, res, next) => {
     );
 
     // Set HttpOnly cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+res.cookie('token', token, {
+  httpOnly: true,
+  secure: true,       // ALWAYS TRUE
+  sameSite: 'none',   // ALWAYS NONE
+  maxAge: 7 * 24 * 60 * 60 * 1000
+});
+
 
     res.status(200).json({
       success: true,
@@ -313,11 +314,12 @@ export const login = async (req, res, next) => {
 
 // Logout
 export const logout = async (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-  });
+res.clearCookie('token', {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none'
+});
+
   res.status(200).json({
     success: true,
     message: 'Logged out successfully'
@@ -566,3 +568,4 @@ export const resendPasswordChangeOTP = async (req, res, next) => {
     next(error);
   }
 };
+
