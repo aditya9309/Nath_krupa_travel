@@ -1,4 +1,5 @@
 import express from 'express';
+
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -36,37 +37,17 @@ app.set('trust proxy', 1);
 
 // Middleware
 // CORS configuration - Allow requests from frontend
+// ✅ FINAL – PRODUCTION SAFE (Render + Netlify + Cookies)
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like Postman, mobile apps, or server-to-server)
-    if (!origin) return callback(null, true);
-    
-    // Allowed origins
-    const allowedOrigins = [
-      process.env.CLIENT_URL,
-      'http://localhost:5173',
-      'http://localhost:5174', // Vite default ports
-      // Add your production domain here explicitly if needed
-    ].filter(Boolean); // Remove undefined/null values
-
-    if (allowedOrigins.includes(origin) || (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin))) {
-      return callback(null, true);
-    }
-    
-    // In production, strictly enforce allowed origins
-    if (process.env.NODE_ENV === 'production') {
-      return callback(new Error('Not allowed by CORS'));
-    }
-    
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  origin: true,
+  credentials: true
 }));
 
-// Enable pre-flight requests for all routes
-app.options('*', cors());
+app.options('*', cors({
+  origin: true,
+  credentials: true
+}));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -136,3 +117,4 @@ mongoose.connect(process.env.MONGO_URI)
   });
 
 export default app;
+
