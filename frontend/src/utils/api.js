@@ -1,22 +1,19 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-/* 🔥 GLOBAL FIX (VERY IMPORTANT) */
+/* 🔥 GLOBAL FIX (CRITICAL FOR COOKIE AUTH) */
 axios.defaults.withCredentials = true
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // MUST be .../api
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  baseURL: import.meta.env.VITE_API_URL, // e.g. https://nath-krupa1.onrender.com/api
+  withCredentials: true
 })
 
 /* ================= REQUEST INTERCEPTOR ================= */
 api.interceptors.request.use(
   (config) => {
-    // 🔍 DEBUG (optional)
-    // console.log('API Request:', config.method, config.url)
+    // ❌ Authorization header mat add karo (cookie-based auth hai)
+    // console.log('[API]', config.method?.toUpperCase(), config.url)
     return config
   },
   (error) => Promise.reject(error)
@@ -26,23 +23,23 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    /* 🔴 Network / CORS / Backend down */
     if (!error.response) {
-      toast.error('Network error. Please check your connection.')
+      toast.error('Network error. Please try again.')
       return Promise.reject(error)
     }
 
     const { status, data } = error.response
     const message = data?.message || 'Something went wrong'
 
-    /* 🔥 AUTH HANDLING */
+    /* 🔐 AUTH ERRORS */
     if (status === 401) {
-      // cookie missing / expired
-      // ⚠️ admin pages ko protect karne ke liye
-      toast.error('Session expired. Please login again.')
-
-      // OPTIONAL but RECOMMENDED
+      // ⚠️ IMPORTANT: sirf admin routes pe redirect
       if (window.location.pathname.startsWith('/admin')) {
-        window.location.href = '/login'
+        toast.error('Session expired. Please login again.')
+        setTimeout(() => {
+          window.location.href = '/login'
+        }, 500)
       }
     }
     else if (status === 403) {
