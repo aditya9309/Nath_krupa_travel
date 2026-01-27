@@ -5,7 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/errorHandler.js';
 
-// Routes
+// ================= ROUTES =================
 import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import tripRequestRoutes from './routes/tripRequestRoutes.js';
@@ -31,62 +31,92 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5002;
 
-/* ===================== CORS ===================== */
-app.set("trust proxy", 1);
+/* =====================================================
+   🌐 TRUST PROXY (IMPORTANT FOR RENDER)
+   ===================================================== */
+app.set('trust proxy', 1);
 
+/* =====================================================
+   🔐 CORS — NETLIFY ↔ RENDER (COOKIE SAFE)
+   ===================================================== */
 app.use(
   cors({
-    origin: true,
+    origin: [
+      'https://nathkrupatravels.netlify.app', // ✅ FRONTEND URL (EXACT)
+    ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
-// allow preflight
-app.options("*", cors());
+// ✅ Preflight support
+app.options('*', cors({
+  origin: 'https://nathkrupatravels.netlify.app',
+  credentials: true,
+}));
 
-/* ===================== MIDDLEWARES ===================== */
+/* =====================================================
+   🧩 GLOBAL MIDDLEWARES
+   ===================================================== */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-/* ===================== ROUTES ===================== */
+/* =====================================================
+   🚏 ROUTES
+   ===================================================== */
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/trip-requests', tripRequestRoutes);
+
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/manage', adminManagementRoutes);
+app.use('/api/admin/expenses', expenseRoutes);
+app.use('/api/admin/todos', todoRoutes);
+app.use('/api/admin/tour-categories', tourCategoryRoutes);
+app.use('/api/admin/tour-places', tourPlaceRoutes);
+app.use('/api/admin/itineraries', itineraryRoutes);
+
 app.use('/api/home', homeSectionsRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/routes', routeRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/admin/expenses', expenseRoutes);
-app.use('/api/admin/todos', todoRoutes);
-app.use('/api/admin/tour-categories', tourCategoryRoutes);
-app.use('/api/admin/tour-places', tourPlaceRoutes);
-app.use('/api/admin/itineraries', itineraryRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/contact-enquiries', contactEnquiryRoutes);
 
-/* ===================== HEALTH ===================== */
+/* =====================================================
+   ❤️ HEALTH CHECK
+   ===================================================== */
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'API running' });
+  res.status(200).json({
+    success: true,
+    message: 'Nath Krupa Travels API is running 🚀',
+    timestamp: new Date().toISOString(),
+  });
 });
 
-/* ===================== ERROR ===================== */
+/* =====================================================
+   ❌ ERROR HANDLER
+   ===================================================== */
 app.use(errorHandler);
 
-/* ===================== DB ===================== */
-mongoose.connect(process.env.MONGO_URI)
+/* =====================================================
+   🗄️ DATABASE + SERVER START
+   ===================================================== */
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => {
-    app.listen(PORT, () => console.log(`🚀 Server running on ${PORT}`));
+    console.log('✅ MongoDB connected');
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
   })
-  .catch(err => {
-    console.error(err);
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
   });
 
