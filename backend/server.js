@@ -35,18 +35,22 @@ const PORT = process.env.PORT || 5002;
 app.set('trust proxy', 1);
 
 /* CORS (COOKIE SAFE) */
-const FRONTEND_URL = 'https://nathkrupatravel.netlify.app';
-
 app.use(
   cors({
-    origin: FRONTEND_URL,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: (origin, callback) => {
+      const allowed = [
+        'https://nathkrupatravel.netlify.app'
+      ]
+      if (!origin || allowed.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
+    credentials: true
   })
-);
+)
 
-app.options('*', cors({ origin: FRONTEND_URL, credentials: true }));
 
 /* MIDDLEWARES */
 app.use(express.json());
@@ -99,3 +103,4 @@ mongoose
   });
 
 export default app;
+
