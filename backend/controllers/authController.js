@@ -30,19 +30,15 @@ export const register = async (req, res, next) => {
 
     let existingUser = await User.findOne({ email });
 
-    /* 🔁 OTP EXISTS BUT EXPIRED → CLEAR IT */
-    if (
-      existingUser &&
-      existingUser.otp &&
-      new Date() > existingUser.otp.expiresAt
-    ) {
+    // OTP expired → clear
+    if (existingUser?.otp && new Date() > existingUser.otp.expiresAt) {
       existingUser.otp = undefined;
       await existingUser.save();
-      existingUser = await User.findOne({ email });
+      existingUser = null;
     }
 
-    /* 🔁 USER EXISTS BUT OTP NOT VERIFIED → RESEND OTP */
-    if (existingUser && existingUser.otp) {
+    // OTP pending → resend
+    if (existingUser?.otp) {
       const otp = generateOTP();
       existingUser.otp = {
         code: otp,
@@ -51,13 +47,13 @@ export const register = async (req, res, next) => {
       await existingUser.save();
       await sendOTP(email, otp);
 
-      return res.status(200).json({
+      return res.json({
         success: true,
         message: 'OTP resent to your email'
       });
     }
 
-    /* ❌ USER ALREADY VERIFIED */
+    // Already verified
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -65,7 +61,7 @@ export const register = async (req, res, next) => {
       });
     }
 
-    /* ✅ CREATE NEW USER */
+    // Create new user
     const otp = generateOTP();
 
     await User.create({
@@ -109,15 +105,11 @@ export const verifyOTP = async (req, res, next) => {
     const otp = String(value.otp).trim();
 
     const user = await User.findOne({ email });
-    if (!user || !user.otp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired OTP'
-      });
-    }
 
     if (
-      String(user.otp.code) !== otp ||
+      !user ||
+      !user.otp ||
+      user.otp.code !== otp ||
       new Date() > user.otp.expiresAt
     ) {
       return res.status(400).json({
@@ -131,7 +123,7 @@ export const verifyOTP = async (req, res, next) => {
 
     await sendWelcomeEmail(user.email, user.name);
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Registration successful. Please login.'
     });
@@ -172,7 +164,7 @@ export const resendOTP = async (req, res, next) => {
     await user.save();
     await sendOTP(email, otp);
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'OTP resent successfully'
     });
@@ -182,7 +174,7 @@ export const resendOTP = async (req, res, next) => {
 };
 
 /* =====================================================
-   🔐 LOGIN
+   🔐 LOGIN  ✅ COOKIE FIXED
    ===================================================== */
 export const login = async (req, res, next) => {
   try {
@@ -198,25 +190,10 @@ export const login = async (req, res, next) => {
     const { password } = value;
 
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user || user.otp || user.isBlocked) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    /* 🚫 OTP NOT VERIFIED */
-    if (user.otp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please verify OTP before login'
-      });
-    }
-
-    if (user.isBlocked) {
-      return res.status(403).json({
-        success: false,
-        message: 'Account is blocked'
+        message: 'Invalid credentials or account blocked'
       });
     }
 
@@ -234,14 +211,16 @@ export const login = async (req, res, next) => {
       { expiresIn: '7d' }
     );
 
+    // ✅ DO NOT SET domain
     res.cookie('token', token, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none',
+      sameSite: 'None',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Login successful',
       user: {
@@ -263,10 +242,11 @@ export const logout = (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
     secure: true,
-    sameSite: 'none'
+    sameSite: 'None',
+    path: '/'
   });
 
-  res.status(200).json({
+  res.json({
     success: true,
     message: 'Logged out successfully'
   });
