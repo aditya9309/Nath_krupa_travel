@@ -1,43 +1,60 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-// ✅ BASE URL FROM ENV (PRODUCTION SAFE)
+/* 🔥 GLOBAL FIX (VERY IMPORTANT) */
+axios.defaults.withCredentials = true
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // MUST include /api
+  baseURL: import.meta.env.VITE_API_URL, // MUST be .../api
   withCredentials: true,
   headers: {
-    'Content-Type': 'application/json',
-  },
+    'Content-Type': 'application/json'
+  }
 })
 
-// Request interceptor
+/* ================= REQUEST INTERCEPTOR ================= */
 api.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    // 🔍 DEBUG (optional)
+    // console.log('API Request:', config.method, config.url)
+    return config
+  },
   (error) => Promise.reject(error)
 )
 
-// Response interceptor
+/* ================= RESPONSE INTERCEPTOR ================= */
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 🔴 Network / CORS / backend unreachable
     if (!error.response) {
       toast.error('Network error. Please check your connection.')
       return Promise.reject(error)
     }
 
-    const status = error.response.status
-    const message = error.response.data?.message || 'An error occurred'
+    const { status, data } = error.response
+    const message = data?.message || 'Something went wrong'
 
+    /* 🔥 AUTH HANDLING */
     if (status === 401) {
-      // token expired / not logged in
-    } else if (status === 403) {
+      // cookie missing / expired
+      // ⚠️ admin pages ko protect karne ke liye
+      toast.error('Session expired. Please login again.')
+
+      // OPTIONAL but RECOMMENDED
+      if (window.location.pathname.startsWith('/admin')) {
+        window.location.href = '/login'
+      }
+    }
+    else if (status === 403) {
       toast.error(message || 'Access denied')
-    } else if (status === 404) {
-      toast.error(message || 'Resource not found')
-    } else if (status >= 500) {
+    }
+    else if (status === 404) {
+      toast.error('Resource not found')
+    }
+    else if (status >= 500) {
       toast.error('Server error. Please try again later.')
-    } else if (status >= 400) {
+    }
+    else {
       toast.error(message)
     }
 
