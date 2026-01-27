@@ -1,70 +1,48 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import jwt from 'jsonwebtoken'
+import User from '../models/User.js'
 
 export const authenticate = async (req, res, next) => {
-  // ✅ Allow preflight
-  if (req.method === 'OPTIONS') return next();
-
   try {
-    // ✅ Token from cookie ONLY
-    const token = req.cookies?.token;
+    const token = req.cookies?.token
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Not logged in'
-      });
+        message: 'Not authenticated'
+      })
     }
 
-    // ✅ Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
-    const user = await User.findById(decoded.userId).select('-password');
-
+    const user = await User.findById(decoded.userId).select('-password')
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res.status(401).json({ success: false, message: 'User not found' })
     }
 
     if (user.isBlocked) {
-      return res.status(403).json({
-        success: false,
-        message: 'Account is blocked'
-      });
+      return res.status(403).json({ success: false, message: 'Account blocked' })
     }
 
-    // ✅ Attach user
-    req.user = user;
-    next();
-  } catch (error) {
+    req.user = user
+    next()
+  } catch (err) {
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired token'
-    });
+    })
   }
-};
+}
 
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
-      });
+      })
     }
+    next()
+  }
+}
 
-    next();
-  };
-};
-
-export const adminMiddleware = authorize('admin');
-export const authMiddleware = authenticate;
+export const adminMiddleware = [authenticate, authorize('admin')]
