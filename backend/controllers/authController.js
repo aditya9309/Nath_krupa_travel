@@ -8,12 +8,12 @@ import {
   resendOTPSchema
 } from '../utils/validation.js';
 
-// 🔐 OTP generator
+/* ================= OTP GENERATOR ================= */
 const generateOTP = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
 /* =====================================================
-   🧾 REGISTER (SMART & SAFE)
+   🧾 REGISTER
    ===================================================== */
 export const register = async (req, res, next) => {
   try {
@@ -28,9 +28,20 @@ export const register = async (req, res, next) => {
     let { name, email, phone, password } = value;
     email = email.toLowerCase().trim();
 
-    const existingUser = await User.findOne({ email });
+    let existingUser = await User.findOne({ email });
 
-    // 🟡 User exists but OTP not verified → resend OTP
+    /* 🔁 OTP EXISTS BUT EXPIRED → CLEAR IT */
+    if (
+      existingUser &&
+      existingUser.otp &&
+      new Date() > existingUser.otp.expiresAt
+    ) {
+      existingUser.otp = undefined;
+      await existingUser.save();
+      existingUser = await User.findOne({ email });
+    }
+
+    /* 🔁 USER EXISTS BUT OTP NOT VERIFIED → RESEND OTP */
     if (existingUser && existingUser.otp) {
       const otp = generateOTP();
       existingUser.otp = {
@@ -46,7 +57,7 @@ export const register = async (req, res, next) => {
       });
     }
 
-    // 🔴 Fully registered user
+    /* ❌ USER ALREADY VERIFIED */
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -54,9 +65,10 @@ export const register = async (req, res, next) => {
       });
     }
 
-    // ✅ Create new user
+    /* ✅ CREATE NEW USER */
     const otp = generateOTP();
-    const user = await User.create({
+
+    await User.create({
       name,
       email,
       phone,
@@ -94,7 +106,7 @@ export const verifyOTP = async (req, res, next) => {
     }
 
     const email = value.email.toLowerCase().trim();
-    const { otp } = value;
+    const otp = String(value.otp).trim();
 
     const user = await User.findOne({ email });
     if (!user || !user.otp) {
@@ -105,7 +117,7 @@ export const verifyOTP = async (req, res, next) => {
     }
 
     if (
-      user.otp.code !== otp ||
+      String(user.otp.code) !== otp ||
       new Date() > user.otp.expiresAt
     ) {
       return res.status(400).json({
@@ -122,6 +134,47 @@ export const verifyOTP = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Registration successful. Please login.'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/* =====================================================
+   🔁 RESEND OTP
+   ===================================================== */
+export const resendOTP = async (req, res, next) => {
+  try {
+    const { error, value } = resendOTPSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
+    }
+
+    const email = value.email.toLowerCase().trim();
+    const user = await User.findOne({ email });
+
+    if (!user || !user.otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'No pending OTP found'
+      });
+    }
+
+    const otp = generateOTP();
+    user.otp = {
+      code: otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    };
+
+    await user.save();
+    await sendOTP(email, otp);
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP resent successfully'
     });
   } catch (err) {
     next(err);
@@ -149,6 +202,14 @@ export const login = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
+      });
+    }
+
+    /* 🚫 OTP NOT VERIFIED */
+    if (user.otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify OTP before login'
       });
     }
 
